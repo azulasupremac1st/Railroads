@@ -33,7 +33,7 @@ public class GameEvaluator {
     public static final int DIRECTION_DOWN = 2;
     public static final int DIRECTION_LEFT = 3;
 
-    //give initial board and current board -> compute a score
+    //daj initial board i praj score
     public int evaluateTiles(int[][] initialBoard, int[][] currentBoard, Train[] trains, int trainPairCount ){
         int rows = initialBoard.length;
         int columns = initialBoard[0].length;
@@ -54,6 +54,35 @@ public class GameEvaluator {
             }
         }
 
+        int rewardForConnection = 1;
+        for(int r=0;r<rows;r++){
+            for (int c=0;c<columns;c++){
+                int tile = currentBoard[r][c];
+                if (tile<0) continue;
+
+                if (r>0){
+                    int neighbour = currentBoard[r-1][c];
+                    if (neighbour>=0 && isConnectionValid(tile, neighbour, DIRECTION_UP)){
+                        score += rewardForConnection;
+                    }
+                }
+
+                if (c<columns-1){
+                    int neighbour = currentBoard[r][c+1];
+                    if (neighbour >= 0 && isConnectionValid(tile, neighbour, DIRECTION_RIGHT)){
+                        score += rewardForConnection;
+                    }
+                }
+
+                if (r<rows-1){
+                    int neighbour = currentBoard[r+1][c];
+                    if(neighbour>=0 && isConnectionValid(tile, neighbour, DIRECTION_DOWN)){
+                        score += rewardForConnection;
+                    }
+                }
+            }
+        }
+
         for(int i=0; i<trainPairCount; i++){
             Train t = trains[i];
             if(t==null){continue;}
@@ -64,8 +93,11 @@ public class GameEvaluator {
             int destinationColumn = t.getDestinationColumn();
 
             boolean pathExists = DFS(currentBoard, startRow, startColumn, destinationRow, destinationColumn);
-            if (!pathExists){
-                score -= 10;
+            if (pathExists){
+                score += 50;
+            } else {
+                int m = Math.abs(startRow - destinationRow) + (startColumn - destinationColumn);
+                score -= m;
             }
         }
 
@@ -77,22 +109,16 @@ public class GameEvaluator {
         boolean currentOpens = opensInDirection(currentTile, direction);
         int opposite = oppositeDirection(direction);
         boolean neighbourOpens = opensInDirection(neighbourTile, opposite);
-
         return currentOpens && neighbourOpens;
-
-
-
     }
 
     private boolean opensInDirection(int tile, int direction){
         if(tile==TRAIN || tile == DESTINATION){
             return true;
         }
-
         if (tile<0 || tile >= thisTileOpensUp.length){
             return false;
         }
-
         if (direction == DIRECTION_UP){
             return thisTileOpensUp[tile] == 1;
         } else if (direction == DIRECTION_RIGHT){
@@ -114,8 +140,8 @@ public class GameEvaluator {
     }
 
     public boolean DFS (int[][] board, int startR, int startC, int destR, int destC){
-        Stack<int[]> dfsStack = new Stack<>(); //u need a stack - done
-        boolean[][] visitedArr = new boolean[board.length][board[0].length]; //a visited[][] array - done
+        Stack<int[]> dfsStack = new Stack<>();
+        boolean[][] visitedArr = new boolean[board.length][board[0].length];
         dfsStack.push(new int[] { startR, startC});
 
         while (!dfsStack.isEmpty()){
@@ -126,7 +152,6 @@ public class GameEvaluator {
             if (currentRow==destR && currentColumn==destC){
                 return true;
             }
-
             if (visitedArr[currentRow][currentColumn]){
                 continue;
             }

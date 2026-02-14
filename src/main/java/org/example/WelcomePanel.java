@@ -9,8 +9,10 @@ public class WelcomePanel extends JPanel {
         private final JTextField xField;
         private final JTextField yField;
         private final JTextField trainsField;
+        private static int GAclickCounter = 0;
 
         public WelcomePanel(JPanel root, CardLayout cardLayout) {
+
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
             add(Box.createVerticalStrut(20));
@@ -19,10 +21,7 @@ public class WelcomePanel extends JPanel {
             titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
             titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             add(titleLabel);
-
             add(Box.createVerticalStrut(20));
-
-            // Grid dimension inputs
             JPanel dimPanel = new JPanel();
             JLabel dimLabel = new JLabel("Grid dimensions (X × Y): ");
             xField = new JTextField(3);
@@ -35,7 +34,6 @@ public class WelcomePanel extends JPanel {
             dimPanel.add(yField);
             add(dimPanel);
 
-            // Number of trains (not used yet in drawing, but kept for future)
             JPanel trainsPanel = new JPanel();
             JLabel trainsLabel = new JLabel("Number of trains: ");
             trainsField = new JTextField(5);
@@ -72,6 +70,8 @@ public class WelcomePanel extends JPanel {
                     return;
                 }
 
+
+
                 int totalCells = rows * cols;
                 int maxAllowedTrains = (totalCells - 1)/2;
 
@@ -83,7 +83,6 @@ public class WelcomePanel extends JPanel {
                     return;
                 }
 
-                // ---- LIMIT DIMENSIONS BASED ON SCREEN SIZE (HARD LIMIT) ----
                 Rectangle bounds = GraphicsEnvironment
                         .getLocalGraphicsEnvironment()
                         .getMaximumWindowBounds();
@@ -111,6 +110,7 @@ public class WelcomePanel extends JPanel {
                     informationFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                     JTextArea ta = new JTextArea(infoText);
                     informationFrame.add(new JScrollPane(ta));
+
                     informationFrame.setSize(400, 300);
                     informationFrame.setLocationRelativeTo(null);
                     informationFrame.setVisible(true);
@@ -118,7 +118,11 @@ public class WelcomePanel extends JPanel {
 
                 JButton evaluatingButton = new JButton("Evaluator");
                 evaluatingButton.addActionListener(eve -> {
+
+
+
                         boardPanel.evaluateCurrentBoard();
+
                         boardPanel.testPathsForALLtrains();
 
             });
@@ -127,8 +131,9 @@ public class WelcomePanel extends JPanel {
                     new Thread(() -> {
                         int[][] boardCopy = boardPanel.getCopyOfBoard();
                         int[][] initialCopy = boardPanel.getCopyOfInitialBoard();
-
-                        GeneticAlgorithm ga = new GeneticAlgorithm(boardPanel.getEvaluator(), boardPanel.getTrains(), boardPanel.getTrainPairCount());
+                        GAclickCounter++;
+                        long seed = Configurations.RANDOM_SEED + GAclickCounter;
+                        Algo ga = new Algo(boardPanel.getEvaluator(), boardPanel.getTrains(), boardPanel.getTrainPairCount());
                         ga.run(boardCopy, initialCopy, boardPanel);
                     }).start();
 

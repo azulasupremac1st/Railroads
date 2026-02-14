@@ -12,6 +12,7 @@ public class BoardClick extends MouseAdapter{
         int mouseX = e.getX();
         int mouseY = e.getY();
 
+
         int gridX = mouseX - Configurations.GRID_PADDING;
         int gridY = mouseY - Configurations.GRID_PADDING;
 
@@ -25,7 +26,7 @@ public class BoardClick extends MouseAdapter{
         int col = gridX/Configurations.TILE_SIZE;
         int row = gridY/Configurations.TILE_SIZE;
 
-        System.out.println("mouse clicked at" + mouseX + " , "+mouseY);
+        //System.out.println("mouse clicked at" + mouseX + " , "+mouseY);
         board.onTileClicked(row, col);
     }
 

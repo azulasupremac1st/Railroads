@@ -94,7 +94,7 @@ public class BoardPanel extends JPanel {
                 return;
             }
 
-            System.out.println("Tile clicked at row = "+row+" and columb: " +col);
+            System.out.println("tile clicked at row = "+row+" and column: " +col);
             lastClickedR = row;
             lastClickedC = col;
             int tileX = Configurations.GRID_PADDING + col*Configurations.TILE_SIZE;
@@ -103,7 +103,7 @@ public class BoardPanel extends JPanel {
         }
 
         public String getTrainsInfo(){
-            String text = "Train and Destination pars: \n\n";
+            String text = "Train and Destination pairs: \n\n";
             for(int i=0 ;i<trainPairCount; i++){
                 Train t = trains[i];
                 text += "T" + (i+1) + ": ("+ t.getStartingRow()+","+t.getStartingColumn()+") -> ("+t.getDestinationRow()+","+t.getDestinationColumn()+")\n";
@@ -152,6 +152,7 @@ public class BoardPanel extends JPanel {
                 }
             }
             repaint();
+
         }
 
 
@@ -171,13 +172,9 @@ public class BoardPanel extends JPanel {
             this.evaluator = new GameEvaluator();
 
 
-            // load the image from src/main/resources/grid/tile10.png
-            /* tileImage = new ImageIcon(
-                    Main.class.getResource("/grid/tile4.png")
-            ).getImage();
-             */
 
-            // choose a deterministic random position using the fixed seed
+
+
             Random rng = new Random(Configurations.RANDOM_SEED);
             //int tileRow = rng.nextInt(rows);
             //int tileCol = rng.nextInt(cols);
@@ -333,11 +330,11 @@ public class BoardPanel extends JPanel {
             int startX = Configurations.GRID_PADDING;
             int startY = Configurations.GRID_PADDING;
 
-            // Background behind the grid
+            // bkg behind the grid
             g2.setColor(new Color(230, 230, 230));
             g2.fillRect(startX, startY, cols * Configurations.TILE_SIZE, rows * Configurations.TILE_SIZE);
 
-            // Draw grid and the single tile image
+
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
 
@@ -362,7 +359,7 @@ public class BoardPanel extends JPanel {
                 }
             }
 
-            // Info text
+
             g2.setColor(Color.BLACK);
             g2.drawString("Grid: " + cols + " × " + rows + " | Trains: " + numTrains,
                     10, getHeight() - 10);

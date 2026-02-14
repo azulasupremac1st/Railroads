@@ -13,10 +13,13 @@ public class GeneticAlgorithm {
     private int bestScore;
     private int[][] bestBoard;
 
+    private double temperature = 10.0;
+    private double cR = 0.9995;
 
 
 
-    public GeneticAlgorithm (GameEvaluator evaluator, Train[] trains, int trainPairCount){
+
+    public GeneticAlgorithm (GameEvaluator evaluator, Train[] trains, int trainPairCount, long seed){
         this.evaluator = evaluator;
         this.trains = trains;
         this.trainPairCount = trainPairCount;
@@ -24,6 +27,10 @@ public class GeneticAlgorithm {
     }
 
     public void run(int[][] startBoard, int[][] initialBoard, BoardPanel boardPanel){
+        temperature = 10.0;
+
+
+
         this.initialBoard = initialBoard;
         int rows = startBoard.length;
         int columns = startBoard[0].length;
@@ -70,30 +77,55 @@ public class GeneticAlgorithm {
 
             candidateBoard[mutateRow][mutateColumn] = newType;
             int candidateScore = evaluator.evaluateTiles(this.initialBoard, candidateBoard, trains, trainPairCount);
-            if (candidateScore >=bestScore){
-                bestScore = candidateScore;
-                for(int r=0;r<rows;r++){
-                    for (int c=0; c<columns;c++){
-                        bestBoard[r][c] = candidateBoard[r][c];
-                    }
-                }
+           int delta = candidateScore - currentScore;
+           boolean accept = false;
 
-                currentBoard = candidateBoard;
-                currentScore= candidateScore;
+           if(delta>=0){
+               accept=true;
+           } else {
+               double probability = Math.exp(delta/temperature);
+               if(rnd.nextDouble() < probability){
+                   accept = true;
+               }
+           }
 
-                if (i%50 == 0){
-                    int[][] s = new int[rows][columns];
-                    for(int r=0;r<rows;r++){
-                        for(int c=0;c<columns;c++){
-                            s[r][c] = bestBoard[r][c];
-                        }
-                    }
-                    javax.swing.SwingUtilities.invokeLater(() -> boardPanel.applyBoard(s));
-                }
-            }
+           if (accept){
+               currentBoard = candidateBoard;
+               currentScore = candidateScore;
+
+               if (currentScore>bestScore){
+                   bestScore = currentScore;
+                   for (int r=0;r<rows; r++){
+                       for (int c=0;c<columns;c++){
+                           bestBoard[r][c] = currentBoard[r][c];
+                       }
+                   }
+               }
+
+               if (i%50==0){
+                   int[][] s = new int[rows][columns];
+                   for(int r=0;r<rows;r++){
+                       for (int c=0;c<columns;c++){
+                           s[r][c] = bestBoard[r][c];
+                       }
+                   }
+                   javax.swing.SwingUtilities.invokeLater(() -> boardPanel.applyBoard(s));
+               }
+           }
+           temperature *= cR;
+
+
 
         }
         System.out.println("BEST score after "+iterations+" iterations = "+bestScore);
+
+        int[][] finalBoard = new int[rows][columns];
+        for(int r=0;r<rows;r++){
+            for (int c=0;c<columns;c++){
+                finalBoard[r][c] = bestBoard[r][c];
+            }
+        }
+        javax.swing.SwingUtilities.invokeLater(() -> boardPanel.applyBoard(finalBoard));
     }
 
 }
