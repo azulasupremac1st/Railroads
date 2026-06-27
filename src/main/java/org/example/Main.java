@@ -16,7 +16,7 @@ public class Main {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(Main::createAndShowGUI);
     }
-    private static void createAndShowGUI() {
+    public static void createAndShowGUI() {
         JFrame frame = new JFrame("Railroads");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 

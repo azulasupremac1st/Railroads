@@ -94,7 +94,7 @@ public class BoardPanel extends JPanel {
                 return;
             }
 
-            System.out.println("tile clicked at row = "+row+" and column: " +col);
+            //System.out.println("tile clicked at row = "+row+" and column: " +col);
             lastClickedR = row;
             lastClickedC = col;
             int tileX = Configurations.GRID_PADDING + col*Configurations.TILE_SIZE;
@@ -121,7 +121,7 @@ public class BoardPanel extends JPanel {
             for(int i=0; i<trainPairCount; i++){
                 Train t = trains[i];
                 boolean result = evaluator.existsPath(boardTypes, t.getStartingRow(), t.startingColumn, t.destinationRow, t.getDestinationColumn());
-                System.out.println("Train "+i+"path exists? "+result);
+                System.out.println("Train "+(i+1)+": path exists? "+result);
             }
         }
 
@@ -187,130 +187,78 @@ public class BoardPanel extends JPanel {
 
             boardTypes = new int[rows][cols];
             boolean[][] reserved = new boolean[rows][cols];
-            boolean[][] blocked = new boolean[rows][cols];
-            int totalNumberOfCells = rows * cols;
-            int necessaryReservations = 2 * numTrains;
 
-            for (int d=0; d<necessaryReservations; d++){
-                int numOfTries = 0;
+            for(int i=0; i<numTrains; i++){
+                int tries=0;
                 while(true){
-                    numOfTries++;
-                    if(numOfTries>rows*cols*50){
-                        throw new IllegalStateException("not enough space to place trains/destinations because of constraints");
+                    tries++;
+                    if(tries>rows*cols*50){
+                        throw new IllegalStateException("PLACEMENT FAILED");
                     }
 
                     int r=rng.nextInt(rows);
                     int c=rng.nextInt(cols);
-                    if(!reserved[r][c] && !blocked[r][c]){
-                        reserved[r][c] = true;
-                        blocked[r][c] = true;
-                        if(r>0) blocked[r-1][c] = true;
-                        if(r<rows-1) blocked[r+1][c] = true;
-                        if(c>0) blocked[r][c-1] = true;
-                        if(c<cols-1) blocked[r][c+1] = true;
+                    if(!reserved[r][c] && safeReservation(r,c,reserved)){
+                        reserved[r][c]=true;
+                        boardTypes[r][c]=TRAIN;
+                        trainRow[i]=r;
+                        trainColumn[i]=c;
+                        trainCount++;
                         break;
                     }
                 }
             }
-            for(int r=0; r<rows; r++){
-                for (int c=0; c<cols; c++){
-                    if(reserved[r][c]){
-                        boardTypes[r][c] = EMPTY;
-                    }else {
-                        int randomizedType = rng.nextInt(TILE_IMAGES.length);
-                        boardTypes[r][c] = randomizedType;
+
+            for(int i=0;i<numTrains;i++){
+                int tries=0;
+                while(true){
+                    tries++;
+                    if(tries>rows*cols*50){
+                        throw new IllegalStateException("PLACEMENT FAILED");
                     }
+
+                    int r=rng.nextInt(rows);
+                    int c=rng.nextInt(cols);
+
+                    if(!reserved[r][c] && safeReservation(r,c,reserved)){
+                        reserved[r][c] = true;
+                        boardTypes[r][c]=DESTINATION;
+                        destinationRow[i]=r;
+                        destinationColumn[i]=c;
+                        destinationCount++;
+                        break;
+                    }
+
                 }
             }
 
-            int remainingTrains = numTrains;
-            int remainingDestinations = numTrains;
-
-            for(int r=0; r<rows; r++){
-                for(int c=0; c<cols; c++){
-                    if(boardTypes[r][c] == EMPTY){
-                        if(remainingTrains>0){
-                            boardTypes[r][c] = TRAIN;
-                            remainingTrains--;
-                        } else if (remainingDestinations>0){
-                            boardTypes[r][c] = DESTINATION;
-                            remainingDestinations--;
-                        }
-
-                        if(remainingDestinations == 0 && remainingTrains == 0){
-                            break ;
-                        }
-                    }
-                }
-            }
-
-            initialBoardTypes = new int[rows][cols];
-            for(int r=0; r<rows; r++){
+            for(int r=0;r<rows;r++){
                 for(int c=0;c<cols;c++){
+                    if(!reserved[r][c]){
+                        boardTypes[r][c] = rng.nextInt(TILE_IMAGES.length);
+                    }
+                }
+            }
+
+            initialBoardTypes=new int[rows][cols];
+            for(int r=0;r<rows;r++){
+                for (int c=0;c<cols;c++){
                     initialBoardTypes[r][c] = boardTypes[r][c];
                 }
             }
 
-
-
-            for (int r=0; r<rows; r++){
-                for (int c=0; c<cols; c++){
-                    if(boardTypes[r][c] == TRAIN){
-                        if(trainCount<numTrains){
-                            trainRow[trainCount]=r;
-                            trainColumn[trainCount]=c;
-                            trainCount++;
-                        }
-                    } else if (boardTypes[r][c] == DESTINATION){
-                        if(destinationCount<numTrains){
-                            destinationRow[destinationCount] = r;
-                            destinationColumn[destinationCount] = c;
-                            destinationCount++;
-                        }
-                    }
-                }
+            for(int i=0;i<numTrains; i++){
+                trains[i] = new Train(trainRow[i], trainColumn[i], destinationRow[i], destinationColumn[i]);
             }
 
-            int pairCount = Math.min(trainCount, destinationCount);
-            boolean[] destinationAlreadyUsed = new boolean[destinationCount];
-            for(int i=0; i<pairCount; i++){
-                int chosenDestinationIndex;
-                while(true){
-                    int candidate= rng.nextInt(destinationCount);
-                    if(!destinationAlreadyUsed[candidate]){
-                        destinationAlreadyUsed[candidate]=true;
-                        chosenDestinationIndex=candidate;
-                        break;
-                    }
-                }
-
-                int tr = trainRow[i];
-                int tc = trainColumn[i];
-                int dr = destinationRow[chosenDestinationIndex];
-                int dc = destinationColumn[chosenDestinationIndex];
-                trains[i]=new Train(tr, tc, dr, dc);
-            }
-            trainPairCount = pairCount;
-
-
-/*
-            System.out.println("Found " + trainCount + " trains and " + destinationCount + " destinations.");
-            for (int i = 0; i < Math.min(trainCount, destinationCount); i++) {
-                System.out.println(
-                        "Pair " + i + ": train at (" + trainRow[i] + "," + trainColumn[i] +
-                                ")  destination at (" + destinationRow[i] + "," + destinationColumn[i] + ")"
-                );
-            }
-
- */
+            trainPairCount=numTrains;
 
             menu = new JPopupMenu();
-            for(int i=0; i<NUM_OF_TILE_TYPES; i++){
-                final int tileType = i;
+            for(int i=0;i<NUM_OF_TILE_TYPES;i++){
+                final int tileType=i;
                 JMenuItem item = new JMenuItem(TILE_NAMES[tileType]);
-                item.addActionListener(e->{
-                    if (lastClickedR<0 || lastClickedC<0){return;}
-                    System.out.println("changing tile at ( "+lastClickedR+","+lastClickedC+") to type"+tileType);
+                item.addActionListener(e-> {
+                    if (lastClickedR<0 || lastClickedC <0) return;
                     boardTypes[lastClickedR][lastClickedC] = tileType;
                     repaint();
                 });
@@ -366,6 +314,42 @@ public class BoardPanel extends JPanel {
 
 
 
+        }
+
+        private boolean hasFreeNeighbour(int r, int c, boolean[][] reserved){
+            int free=0;
+            if(r>0 && !reserved[r-1][c]) free++;
+            if(r<rows-1 && !reserved[r+1][c]) free++;
+            if(c>0 && !reserved[r][c-1]) free++;
+            if(c<cols-1 && !reserved[r][c+1]) free++;
+
+            return free >=1;
+        }
+
+        private boolean safeReservation(int r, int c, boolean[][] reserved){
+            if(reserved[r][c]) return false;
+            reserved[r][c] = true;
+            boolean okej = true;
+            okej &= hasFreeAfter(r,c,reserved);
+
+            if(r>0 && reserved[r-1][c]) okej &= hasFreeAfter(r-1, c, reserved);
+            if(r<rows-1 && reserved[r+1][c]) okej &= hasFreeAfter(r+1, c, reserved);
+            if(c>0 && reserved[r][c-1]) okej &= hasFreeAfter(r,c-1, reserved);
+            if(c<cols-1 && reserved[r][c+1]) okej&= hasFreeAfter(r,c+1,reserved);
+
+            reserved[r][c] = false;
+            return okej;
+
+        }
+
+        private boolean hasFreeAfter(int r, int c, boolean[][] reserved){
+            int free=0;
+            if(r>0 && !reserved[r-1][c]) free++;
+            if(r<rows-1 && !reserved[r+1][c]) free++;
+            if(c>0 && !reserved[r][c-1]) free++;
+            if(c<cols-1 && !reserved[r][c+1]) free++;
+
+            return free>=1;
         }
 
 }

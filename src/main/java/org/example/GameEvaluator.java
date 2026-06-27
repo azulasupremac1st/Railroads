@@ -82,24 +82,37 @@ public class GameEvaluator {
                 }
             }
         }
-
+        int unreachableCount = 0;
         for(int i=0; i<trainPairCount; i++){
             Train t = trains[i];
             if(t==null){continue;}
 
-            int startRow = t.getStartingRow();
-            int startColumn = t.getStartingColumn();
-            int destinationRow = t.getDestinationRow();
-            int destinationColumn = t.getDestinationColumn();
+            int startingRow = t.getStartingRow();
+            int startingColumn = t.getStartingColumn();
+            int destRow = t.getDestinationRow();
+            int destColumn = t.getDestinationColumn();
 
-            boolean pathExists = DFS(currentBoard, startRow, startColumn, destinationRow, destinationColumn);
-            if (pathExists){
+            boolean pathExists = DFS(currentBoard, startingRow, startingColumn, destRow, destColumn);
+            if(pathExists){
+                score+=200;
+            } else {
+                unreachableCount++;
+            }
+
+
+
+            /* if (pathExists){
                 score += 50;
             } else {
                 int m = Math.abs(startRow - destinationRow) + (startColumn - destinationColumn);
                 score -= m;
             }
+
+             */
+
+
         }
+        score -= unreachableCount * 300;
 
 
         return score;
@@ -261,7 +274,7 @@ public class GameEvaluator {
 
 
     boolean existsPath(int[][] board, int startR, int startC, int destR, int destC){
-        System.out.println("existsPath called for: ("+startR+","+startC+") -> ("+destR+","+destC+")");
+        //System.out.println("existsPath called for: ("+startR+","+startC+") -> ("+destR+","+destC+")");
         return DFS(board, startR, startC, destR, destC);
     }
 }
