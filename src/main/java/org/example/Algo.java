@@ -8,8 +8,8 @@ public class Algo {
     private final Train[] trains;
     private final int trainPairCount;
     private final Random rnd;
-    private int populationSize=20;
-    private int generations=200;
+    private int populationSize=200;
+    private int generations=500;
 
     public Algo(GameEvaluator evaluator, Train[] trains, int trainPairCount){
         this.evaluator=evaluator;
@@ -212,6 +212,7 @@ public class Algo {
     private void evaluatePopulationDistributed(int[][][] population, int[] fitness){
         int workerCount = MPI.COMM_WORLD.Size()-1;
 
+
         if(workerCount<=0){
             for(int i=0;i<population.length;i++){
                 fitness[i] = evaluator.evaluateTiles(population[0], population[i], trains, trainPairCount);
@@ -219,35 +220,50 @@ public class Algo {
             return;
         }
 
+        int batchSize = (population.length + workerCount-1) / workerCount;
+
         int rows=population[0].length;
         int cols=population[0][0].length;
+        int cells=rows*cols;
+        int activeWorkers=Math.min(workerCount, population.length); //ensuring u only send to workers that actually have candidates
 
-        int nextCandidate=0;
-        while(nextCandidate<population.length){
-            int jobsHere=Math.min(workerCount, population.length - nextCandidate);
+        for (int worker=1;worker<=activeWorkers; worker++){
+            int startIndex=(worker-1)*batchSize;
+            int count=Math.min(batchSize, population.length-startIndex);
 
-            for(int i=0;i<jobsHere;i++){
-                int worker=i+1;
-                int candidateIndex=nextCandidate+i;
+            int[] batchInfo = {startIndex, count};
+            int[] flatBatch = new int[count*cells];
 
-                int[] indexData={candidateIndex};
-                int[] flatBoard=flattenBoard(population[candidateIndex], rows, cols);
 
-                MPI.COMM_WORLD.Send(indexData, 0, 1, MPI.INT, worker, 6);
-                MPI.COMM_WORLD.Send(flatBoard, 0, flatBoard.length, MPI.INT, worker, 3);
+            for (int b=0; b<count; b++){
+                int candidateIndex=startIndex+b;
+
+                int[] flatBoard = flattenBoard(population[candidateIndex], rows, cols);
+
+                for (int i=0; i<cells; i++){
+                    flatBatch[b*cells+i] = flatBoard[i];
+                }
             }
 
-            for(int i=0; i<jobsHere; i++){
-                // int worker=i+1; OVA NE TI TRB ZS CEKAS OD KOJ BILO SRC NE RED PO RED
-                int[] result = new int[2];
-
-                MPI.COMM_WORLD.Recv(result, 0, 2, MPI.INT, MPI.ANY_SOURCE, 4);
-                int candidateIndex=result[0];
-                int candidateFitness=result[1];
-                fitness[candidateIndex] = candidateFitness;
-            }
-            nextCandidate+=jobsHere;
+            MPI.COMM_WORLD.Send(batchInfo, 0 , 2, MPI.INT, worker, 6);
+            MPI.COMM_WORLD.Send(flatBatch, 0, flatBatch.length, MPI.INT, worker, 3);
         }
+
+        for (int worker=1; worker<=activeWorkers; worker++){
+            int startIndex=(worker-1) *batchSize;
+            int count = Math.min(batchSize, population.length-startIndex);
+
+            int[] batchResults = new int[count +1];
+
+            MPI.COMM_WORLD.Recv(batchResults, 0, batchResults.length, MPI.INT, worker, 4);
+
+            int returnedStartIndex = batchResults[0];
+            for (int b=0; b<count; b++){
+                fitness[returnedStartIndex+b]  = batchResults[b+1];
+            }
+        }
+
+
     }
 
     private int[] flattenBoard(int[][] board, int rows, int cols){

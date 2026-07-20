@@ -55,6 +55,7 @@ public class MpiText {
                 }
             }
 
+            GameEvaluator evaluator = new GameEvaluator();
             while(true){
                 Status status = MPI.COMM_WORLD.Probe(0, MPI.ANY_TAG);
 
@@ -64,30 +65,52 @@ public class MpiText {
                     break;
                 }
 
-                int[] candidateIndexD = new int[1];
+                int[] batchInfo = new int[2];
+                MPI.COMM_WORLD.Recv(batchInfo, 0, 2, MPI.INT, 0, 6);
+                int startIndex=batchInfo[0];
+                int count = batchInfo[1];
 
-                MPI.COMM_WORLD.Recv(candidateIndexD, 0,1,MPI.INT, 0, 6);
-                int candidateIndex=candidateIndexD[0];
+                int cells=rows*cols;
+                int[] flatBatch=new int[count*cells];
 
-                int[] flatCandidateBoard=new int[rows*cols];
-                MPI.COMM_WORLD.Recv(flatCandidateBoard, 0, flatCandidateBoard.length, MPI.INT, 0, 3);
+                MPI.COMM_WORLD.Recv(
+                        flatBatch,
+                        0,
+                        flatBatch.length,
+                        MPI.INT,
+                        0,
+                        3
+                );
 
-                int[][] candidateBoard = new int[rows][cols];
 
-                for (int r=0; r<rows;r++){
-                    for (int c=0;c<cols;c++){
-                        candidateBoard[r][c] = flatCandidateBoard[r*cols+c];
+                int[] batchResults = new int[count+1];
+                batchResults[0] = startIndex;
+
+                for (int b=0;b<count;b++){
+                    int[][] candidateBoard = new int[rows][cols];
+
+                    for (int r=0;r<rows;r++){
+                        for (int c=0;c<cols;c++){
+                            int flatIndex=b*cells + r*cols+c;
+                            candidateBoard[r][c] = flatBatch[flatIndex];
+                        }
                     }
+
+                    int candidateFitness = evaluator.evaluateTiles(initialBoard, candidateBoard, trains, trainPairCount);
+
+                    batchResults[b+1] = candidateFitness;
                 }
 
-                GameEvaluator evaluator = new GameEvaluator();
-                int fitness = evaluator.evaluateTiles(initialBoard, candidateBoard, trains, trainPairCount);
+                MPI.COMM_WORLD.Send(
+                        batchResults,
+                        0,
+                        batchResults.length,
+                        MPI.INT,
+                        0,
+                        4
+                );
 
-                //System.out.println("rank " + rank+" calculated fitness: "+fitness);
 
-                int[] result ={candidateIndex, fitness};
-
-                MPI.COMM_WORLD.Send(result, 0, 2, MPI.INT, 0, 4);
             }
         }
 

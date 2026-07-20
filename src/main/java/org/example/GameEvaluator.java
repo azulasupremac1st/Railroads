@@ -33,6 +33,16 @@ public class GameEvaluator {
     public static final int DIRECTION_DOWN = 2;
     public static final int DIRECTION_LEFT = 3;
 
+    private static class PathResult {
+        boolean reached;
+        int smallestDistance;
+
+        PathResult(boolean reached, int smallestDistance){
+            this.reached = reached;
+            this.smallestDistance = smallestDistance;
+        }
+    }
+
     //daj initial board i praj score
     public int evaluateTiles(int[][] initialBoard, int[][] currentBoard, Train[] trains, int trainPairCount ){
         int rows = initialBoard.length;
@@ -92,11 +102,12 @@ public class GameEvaluator {
             int destRow = t.getDestinationRow();
             int destColumn = t.getDestinationColumn();
 
-            boolean pathExists = DFS(currentBoard, startingRow, startingColumn, destRow, destColumn);
-            if(pathExists){
+            PathResult pathResult = DFS(currentBoard, startingRow, startingColumn, destRow, destColumn);
+            if(pathResult.reached){
                 score+=200;
             } else {
                 unreachableCount++;
+                score -= pathResult.smallestDistance*10;
             }
 
 
@@ -152,8 +163,9 @@ public class GameEvaluator {
         return -1;
     }
 
-    public boolean DFS (int[][] board, int startR, int startC, int destR, int destC){
+    public PathResult DFS (int[][] board, int startR, int startC, int destR, int destC){
         Stack<int[]> dfsStack = new Stack<>();
+        int smallestDistance = board.length + board[0].length;
         boolean[][] visitedArr = new boolean[board.length][board[0].length];
         dfsStack.push(new int[] { startR, startC});
 
@@ -162,8 +174,12 @@ public class GameEvaluator {
             int currentRow = current[0];
             int currentColumn = current[1];
 
+            int currentDistance = Math.abs((destR - currentRow)+(destC-currentColumn));
+
+            if(currentDistance<smallestDistance){ smallestDistance = currentDistance; }
+
             if (currentRow==destR && currentColumn==destC){
-                return true;
+                return new PathResult(true, 0);
             }
             if (visitedArr[currentRow][currentColumn]){
                 continue;
@@ -268,13 +284,13 @@ public class GameEvaluator {
 
         //the loop that check its neighbours
         //calls to isValidConnection
-        return false;
+        return new PathResult(false, smallestDistance);
     }
 
 
 
     boolean existsPath(int[][] board, int startR, int startC, int destR, int destC){
         //System.out.println("existsPath called for: ("+startR+","+startC+") -> ("+destR+","+destC+")");
-        return DFS(board, startR, startC, destR, destC);
+        return DFS(board, startR, startC, destR, destC).reached;
     }
 }
